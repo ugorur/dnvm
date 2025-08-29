@@ -121,6 +121,7 @@ EOF
     docker run --rm \
         $docker_flags \
         --env-file "$env_file" \
+        --network host \
         -e "NODE_REPL_HISTORY=/home/node/.node_repl_history" \
         -e "HOME=/home/node" \
         -v "$PWD:/app" \
