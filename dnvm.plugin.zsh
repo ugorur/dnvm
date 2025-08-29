@@ -19,6 +19,13 @@ export DNVM_PREVIOUS_VERSION=""
 
 # Initialize DNVM
 function _dnvm_init() {
+    # Copy dnvm-node-exec to DNVM_ROOT/bin if it doesn't exist or is outdated
+    if [[ ! -f "$DNVM_ROOT/bin/dnvm-node-exec" ]] ||
+       ! cmp -s "$(realpath "$0:a:h")/bin/dnvm-node-exec" "$DNVM_ROOT/bin/dnvm-node-exec" 2>/dev/null && $(realpath "$0:a:h")/bin/dnvm-node-exec >/dev/null 2>&1; then
+        cp "$(realpath "$0:a:h")/bin/dnvm-node-exec" "$DNVM_ROOT/bin/dnvm-node-exec"
+        chmod +x "$DNVM_ROOT/bin/dnvm-node-exec"
+    fi
+
     # Set default version if not set
     if [[ ! -f "$DNVM_CONFIG_DIR/version" ]]; then
         echo "lts" > "$DNVM_CONFIG_DIR/version"
