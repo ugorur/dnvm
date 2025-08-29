@@ -285,7 +285,7 @@ function _dnvm_generate_wrappers() {
 # DNVM wrapper for $basename (Node.js $version)
 
 # Execute $basename via dnvm-node-exec
-exec "\$DNVM_ROOT/bin/dnvm-node-exec" "$version" "$basename" "\$@"
+exec "\$DNVM_ROOT/bin/dnvm-node-exec" "$version" "/home/node/bin/$basename" "\$@"
 EOF
 
         # Make wrapper executable
