@@ -1,0 +1,135 @@
+#!/usr/bin/env zsh
+
+# DNVM Node Docker Executor
+# This script runs Node.js commands inside Docker containers
+#
+# Usage: dnvm-node-exec <version> [command] [args]
+# Example: dnvm-node-exec 20 node --version
+
+# Get DNVM root if not set
+if [[ -z "$DNVM_ROOT" ]]; then
+    DNVM_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/dnvm"
+fi
+
+
+
+# Check if no arguments provided
+if [[ $# -eq 0 ]]; then
+    echo "DNVM Node Executor v1.0.0"
+    echo "Usage: $0 <version> [command] [args]"
+    echo "Example: $0 20 npm --version"
+    exit 1
+fi
+
+# Source DNVM config functions if not already loaded
+if ! type _dnvm_get_config_path >/dev/null 2>&1; then
+    DNVM_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dnvm"
+    source "$DNVM_ROOT/lib/config.zsh" >/dev/null 2>&1 || true
+fi
+
+# Function to check if Docker is available
+function check_docker() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "Error: Docker is required but not installed" >&2
+        return 1
+    fi
+
+    if ! docker info >/dev/null 2>&1; then
+        echo "Error: Docker daemon is not running" >&2
+        return 1
+    fi
+}
+
+# Function to ensure Docker image exists
+function ensure_image() {
+    local version="$1"
+
+    if [[ -z "$version" ]]; then
+        echo "Error: Version required" >&2
+        return 1
+    fi
+
+    if ! docker image inspect node:"$version" >/dev/null 2>&1; then
+        if ! docker pull node:"$version" >/dev/null 2>&1; then
+            echo "Error: Failed to pull Docker image for Node $version" >&2
+            return 1
+        fi
+    fi
+}
+
+# Main function
+function run_in_docker() {
+    # Check if we have at least version argument
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: $0 <version> [command] [args...]" >&2
+        return 1
+    fi
+
+    local version="$1"
+    shift
+
+    # Check prerequisites
+    check_docker || return 1
+    ensure_image "$version" || return 1
+
+    # Create volume directory
+    mkdir -p "$DNVM_ROOT/versions/$version"
+
+    # Handle special case: if command is empty, run node interactively
+    if [[ $# -eq 0 ]]; then
+        set -- node
+    fi
+
+    # Create environment file with all variables except PATH
+    local env_file="/tmp/node-env"
+    env | grep -v '^PATH=' | grep -v '^DNVM_' | grep -v '/home' | grep -v '^EDITOR=' | grep -v '^LOGNAME=' | grep -v '^XAUTHORITY=' | grep -v '^HOSTNAME=' | grep -v '^HOME=' > "$env_file"
+
+    # Create .npmrc file with mandatory configuration
+        cat > "$DNVM_ROOT/versions/$version/.npmrc" << EOF
+# DNVM Docker-friendly paths
+prefix=/home/node/
+cache=/home/node/.npm-cache
+
+# User configuration from $DNVM_CONFIG_DIR/npmrc
+EOF
+
+    # Merge user configuration if it exists
+    if [[ -f "$DNVM_CONFIG_DIR/npmrc" ]]; then
+        # Append user config, skipping lines that conflict with mandatory config
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            [[ -z "$line" ]] && continue
+            [[ "$line" =~ ^[[:space:]]*# ]] && echo "$line" >> "$DNVM_ROOT/versions/$version/.npmrc" && continue
+
+            # Skip lines that start with prefix= or cache= to avoid conflicts
+            [[ "$line" =~ ^[[:space:]]*prefix= ]] && continue
+            [[ "$line" =~ ^[[:space:]]*cache= ]] && continue
+
+            # Append the line
+            echo "$line" >> "$DNVM_ROOT/versions/$version/.npmrc"
+        done < "$DNVM_CONFIG_DIR/npmrc"
+    fi
+
+    # Detect if we have a terminal and set appropriate Docker flags
+    local docker_flags="-i"
+    if [[ -t 0 ]]; then
+        docker_flags="-it"
+    fi
+
+    # Execute in Docker container with configuration files
+
+    docker run --rm \
+        $docker_flags \
+        --env-file "$env_file" \
+        -e "NODE_REPL_HISTORY=/home/node/.node_repl_history" \
+        -e "HOME=/home/node" \
+        -v "$PWD:/app" \
+        -v "$DNVM_ROOT/versions/$version:/home/node" \
+        -w /app \
+        --user "$(id -u):$(id -g)" \
+        "node:$version" \
+        "$@"
+}
+
+# Run main function with arguments
+run_in_docker "$@"

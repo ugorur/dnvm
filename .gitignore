@@ -1,0 +1,54 @@
+# DNVM - Docker Node Version Manager Zsh Plugin .gitignore
+
+# Data directories (XDG Base Directory compliant)
+# These are generated at runtime and should not be committed
+data/
+.cache/
+.local/share/dnvm/
+.config/dnvm/
+
+# Version-specific binaries and wrappers
+# Only keep the executable dnvm-node-exec and npm
+bin/*/node
+bin/*/npm
+bin/*/npx
+bin/*/yarn
+bin/*/pnpm
+*.tgz
+*.tar.gz
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
