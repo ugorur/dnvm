@@ -109,9 +109,6 @@ function dnvm-global() {
 
     # Save to config
     echo "$version" > "$DNVM_CONFIG_DIR/version"
-
-    # Auto-setup the version
-    _dnvm_ensure_version "$version"
 }
 
 # dnvm versions - List available versions
