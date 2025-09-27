@@ -47,6 +47,8 @@ function _dnvm_init() {
     local global_version=$(cat "$DNVM_CONFIG_DIR/version")
     if [[ "$global_version" != "none" ]]; then
         export DNVM_GLOBAL_VERSION="$global_version"
+
+        dnvm-use "$DNVM_GLOBAL_VERSION"
     fi
 
     # Add DNVM bin to PATH
